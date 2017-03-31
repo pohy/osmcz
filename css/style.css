@@ -1,5 +1,5 @@
 html {
-    overflow-y: scroll;
+    overflow-y: auto;
 }
 
 body {
@@ -192,6 +192,21 @@ a:hover.as-text {
 }
 #map-container a.leaflet-control-layers-toggle:before { content: "Mapové vrstvy"; }
 #map-container a.leaflet-control-layers-toggle:hover { text-decoration: none; }
+
+#map-container a.leaflet-control-photoDBbtn-text {
+    width: 46px;
+    height: 80px;
+    background-position: center 0px;
+    padding-top: 45px;
+    font-size: 10px;
+    color: #000 !important;
+    text-align: center;
+    display: block;
+    background-image: url(../img/gp/photoDB-add.png);
+    background-repeat: no-repeat;
+}
+#map-container a.leaflet-control-photoDBbtn-text:before { content: "Přidat obrázek"; }
+#map-container a.leaflet-control-photoDBbtn-text:hover { text-decoration: none; }
 
 /* --------------------------- */
 /* Customized .leaflet-sidebar */
