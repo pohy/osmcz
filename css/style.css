@@ -204,6 +204,7 @@ a:hover.as-text {
     display: block;
     background-image: url(../img/gp/photoDB-add.png);
     background-repeat: no-repeat;
+    text-decoration: none;
 }
 #map-container a.leaflet-control-photoDBbtn-text:before { content: "Přidat obrázek"; }
 #map-container a.leaflet-control-photoDBbtn-text:hover { text-decoration: none; }
@@ -292,7 +293,7 @@ a:hover.as-text {
 }
 
 .sidebar-inner img {
-        width: 250px;
+        max-width: 250px;
     }
 
 #poi-sidebar img {
@@ -725,7 +726,11 @@ div[group-active=true]:hover {
 }
 
 .bigger {
-  font-size:3em;
+  font-size: 3em;
+}
+
+.smaller {
+  font-size: 0.8em;
 }
 
 .crossed {
@@ -747,6 +752,31 @@ div[group-active=true]:hover {
 .semigrey {
     color: rgba(127,127,127,0.2);
 }
+
+
+/* PhotoDB-gui.js */
+
+#photoDB-preview {
+    margin-bottom: 10px;
+}
+
+.photoDB-message {
+    margin-top: 5px;
+}
+
+#photoDB-upload-form .label-margin {
+    margin-bottom: 0px;
+    margin-top: 5px;
+}
+
+.photoDB-btn-grp {
+    margin-top: 1em;
+    border-top: rgba(0,0,0,0.2) solid 1px;
+    padding-top: 1em;
+}
+
+/* END of PhotoDB-gui.js */
+
 
 /* leaflet-condensed-attribution plugin*/
 .leaflet-container .leaflet-condensed-attribution {
