@@ -764,6 +764,10 @@ div[group-active=true]:hover {
     margin-top: 5px;
 }
 
+#photoDB-upload-form #photo .photoDB-message {
+    margin-top: 15px;
+}
+
 #photoDB-upload-form .label-margin {
     margin-bottom: 0px;
     margin-top: 5px;
@@ -773,6 +777,14 @@ div[group-active=true]:hover {
     margin-top: 1em;
     border-top: rgba(0,0,0,0.2) solid 1px;
     padding-top: 1em;
+}
+
+#photoDB-upload-form input[type=text]:focus, select:focus {
+    border:2px solid #337ab7 !important;
+}
+
+#photoDB-upload-form input[type=text].inputError {
+    border:2px solid #d9534f;
 }
 
 /* END of PhotoDB-gui.js */

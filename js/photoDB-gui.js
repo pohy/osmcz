@@ -17,6 +17,8 @@ L.Control.PhotoDBGui = L.Control.extend({
     this._createButton();
     this._map = map;
     this._precision = 5;
+    this.positionMarkerVisible = false;
+
 
     return this._container;
   },
@@ -69,18 +71,18 @@ L.Control.PhotoDBGui = L.Control.extend({
             <input type="hidden" id="lat" name="lat" value="0" exif-value="" />
             <input type="hidden" id="lon" name="lon" value="0" exif-value="" />
 
-        <h5>Fotografie</h5>
-        <fieldset>
+        <fieldset id="photo">
+            <h5>Fotografie</h5>
           <img id="photoDB-preview" height="200" src="" alt="Náhled fotografie..." class="thumbnail hidden">
           <input name="uploadedfile" type="file" id="photoDB-file" size="20" class="hidden"/>
           <div id="imgSelBtnDiv">
             <input type="button" id="imgSelBtn" value="Vyberte fotografii" class="btn btn-default btn-xs center-block" />
           </div>
-          <div id="photoDB-img-message" class="photoDB-message alert-warning block-center hidden"></div>
+          <div id="photoDB-img-message" class="alert alert-danger photoDB-message text-center"></div>
         </fieldset>
 
-        <h5>Pozice <span class="smaller">(lat,lon)</span></h5>
         <fieldset id="latlonFs">
+            <h5>Pozice <span class="smaller">(lat,lon)</span></h5>
             <div class="input-group input-group-sm">
                 <div id="latlonSource" class="input-group-btn input-group-btn" data-toggle="buttons">
                     <label id="sourceManual" class="btn btn-secondary btn-default active">
@@ -95,8 +97,8 @@ L.Control.PhotoDBGui = L.Control.extend({
             <div id="photoDB-latlon-message" class="photoDB-message mark text-center" style="display: none;"></span>
         </fieldset>
 
-        <h5>Doplňující údaje</h5>
         <fieldset id="otherData">
+            <h5>Doplňující údaje</h5>
             <div class="form">
                 <label for="author" class="label-margin">Autor:</label>
                 <input type="text" id="author" name="author" placeholder="Vaše jméno/přezdívka" class="form-control input-sm">
@@ -140,44 +142,35 @@ L.Control.PhotoDBGui = L.Control.extend({
         </fieldset>
         <fieldset>
             <div class="photoDB-btn-grp">
-                <input type="reset" id="resetBtn" name="reset" value="Reset" class="btn btn-default btn-xs"/>
-                <input type="submit" id="submitBtn" name="submitBtn" value="Nahrát fotografii" class="btn btn-default btn-xs pull-right disabled"/>
+                <input type="reset" id="resetBtn" name="reset" value="Reset" onclick="return false;" class="btn btn-default btn-xs"/>
+                <input type="submit" id="submitBtn" name="submitBtn" value="Nahrát fotografii" onclick="return false;" class="btn btn-default btn-xs pull-right" disabled />
             </div>
         </fieldset>
         `;
 
         $('#sidebar-content').html([
-            { maxSize: '1000000' }
+            { maxSize: '10000000' }
         ].map(formTemplate));
 
         var previewContainer = document.getElementById("photoDB-preview");
         var uploadedFile = document.getElementById("photoDB-file");
         var imgSelBtn = document.getElementById("imgSelBtn");
         var sourceExif = document.getElementById("sourceExif");
+        var author = document.getElementById("author");
         var phototype = document.getElementById("phototype");
         var resetBtn = document.getElementById("resetBtn");
+        var submitBtn =document.getElementById("submitBtn");
 
-//         onload="osmcz.gpcheck.readExif(this)"
-//         onchange="osmcz.gpcheck.previewFile(' + osmid + ')"
-//         onclick="osmcz.gpcheck.selectImageClicked();"
-
-//         onchange="osmcz.gpcheck.coordSourceChanged('+osmid+');"
-//         onchange="osmcz.gpcheck.latlonChanged('+osmid+');"
-//         onchange="osmcz.gpcheck.latlonChanged('+osmid+');"
-
-//         onchange="osmcz.gpcheck.coordSourceChanged('+osmid+');"
-
-//         onchange="osmcz.gpcheck.authorChanged(' + osmid + ')"
-
-//         onclick="osmcz.gpcheck.resetForm(' + osmid + ');return false;"
 //         onclick="osmcz.gpcheck.uploadFormData(' + osmid + ');return false;"
 
         L.DomEvent.on(imgSelBtn, 'click', this._selectImageClicked, this);
         L.DomEvent.on(uploadedFile, 'change', this._previewFile, this);
         L.DomEvent.on(previewContainer, 'load', this._readExif, this);
         L.DomEvent.on(sourceExif, 'click', this._sourceExifClicked, this);
+        L.DomEvent.on(author, 'change', this._authorChanged, this);
         L.DomEvent.on(phototype, 'change', this._phototypeChanged, this);
         L.DomEvent.on(resetBtn, 'click', this._resetForm, this);
+        L.DomEvent.on(submitBtn, 'click', this._submitForm  , this);
 
         this._getLicenses();
 
@@ -201,6 +194,8 @@ L.Control.PhotoDBGui = L.Control.extend({
             this._updateLatLonLabel(position.lat, position.lng);
         }, this);
 
+        // Reset form to default state
+        this._resetForm();
 
         sidebar.on('hidden', this._closeSidebar, this);
         osmcz.sidebar.show();
@@ -230,10 +225,13 @@ L.Control.PhotoDBGui = L.Control.extend({
 
     // Form - Exif button clicked
     _sourceExifClicked: function(e) {
+        if ($('#photoDB-upload-form #sourceExif').hasClass('disabled')) {
+            return;
+        }
         var lat = $('#photoDB-upload-form #lat').attr('exif-value');
         var lon = $('#photoDB-upload-form #lon').attr('exif-value');
         this._updateLatLonLabel(lat, lon);
-        this._moveMarker(lat, lon);
+        this._moveMarker(lat, lon, true);
     },
 
     _phototypeChanged: function(e) {
@@ -244,59 +242,88 @@ L.Control.PhotoDBGui = L.Control.extend({
         }
     },
 
-    _previewFile: function(e) {
-        var preview = $('#photoDB-upload-form #photoDB-preview'); //selects the query named img
-        var file    = $('#photoDB-upload-form #photoDB-file').prop("files")[0]; //sames as here
-        var message = $('#photoDB-upload-form #photoDB-img-message');
-        var reader  = new FileReader();
+    // Check author field, show alert when missing
+    _authorChanged: function(e) {
+        var author = $('#photoDB-upload-form #author');
+        author.prop("title","");
+        author.removeClass("inputError");
+        this._authorError = false;
 
-        preview.attr("src", "");
-        preview.attr("alt", "Generuji náhled. Počkejte prosím...");
-
-        reader.onloadend = function () {
-            preview.attr("src", reader.result);
-            preview.attr("alt", "Náhled fotografie...");
-        }
-
-        message.html('');
-
-        if (file) {
-            reader.readAsDataURL(file); //reads the data as a URL
-            preview.attr("style", "display:block");
-            preview.attr("class", "center-block");
-
-            // Check file size
-            if (file.size > $("#photoDB-upload-form input[name='MAX_FILE_SIZE']").val()) {
-                message.html('<span class="glyphicon glyphicon-alert text-danger"></span> Soubor je moc velký!');
-                message.show();
-            }
+        if (!author.val()) {
+          author.prop("title","Povinné pole!");
+          author.addClass("inputError");
+          this._authorError = true;
         } else {
-            preview.attr("src","");
-            preview.attr("style", "display:none");
-            message.html('<span class="glyphicon glyphicon-alert text-danger" title="Povinné pole!"></span>');
-            message.show();
+            if (author.val() != Cookies.get("_photoDB_author")) {
+                Cookies.set("_photoDB_author", author.val(), {expires: 90});
+            }
         }
 
         this._updateSubmitBtnStatus();
     },
 
-    _resetForm: function() {
-        this._hideMarker();
+    _previewFile: function(e) {
+        var preview = $('#photoDB-upload-form #photoDB-preview'); //selects the query named img
+        var file    = $('#photoDB-upload-form #photoDB-file').prop("files")[0]; //sames as here
+        var message = $('#photoDB-upload-form #photoDB-img-message');
+        var reader  = new FileReader();
+        var imageType = /image.*/;
 
-        // Show guidepost options block
-        $('#photoDB-upload-form #guidepostOptions').show();
+        message.hide();
 
-        // Hide image thumbnail
-        var preview = $('#photoDB-upload-form #photoDB-preview');
-        preview.hide();
-        preview.attr("src", "");
+        if (file.type.match(imageType)) {
+            preview.attr("src", "");
+            preview.attr("alt", "Generuji náhled. Počkejte prosím...");
 
-        // read author and license from cookies
+            reader.onloadend = function () {
+                preview.attr("src", reader.result);
+                preview.attr("alt", "Náhled fotografie...");
+            }
 
+            message.html('');
+
+            if (file) {
+                reader.readAsDataURL(file); //reads the data as a URL
+                preview.attr("style", "display:block");
+                preview.attr("class", "center-block");
+
+                // Check file size
+                if (file.size > $("#photoDB-upload-form input[name='MAX_FILE_SIZE']").val()) {
+                    message.html('<span class="glyphicon glyphicon-alert text-danger"></span> Soubor je moc velký!');
+                    message.show();
+                }
+            } else {
+                preview.attr("src","");
+                preview.attr("style", "display:none");
+                message.html('<span class="glyphicon glyphicon-alert text-danger"></span> Povinné pole!');
+                message.show();
+            }
+        } else {
+                this._hideMarker();
+                this._updateLatLonLabel(0, 0);
+                $('#photoDB-upload-form #latlonFs').hide();
+                $('#photoDB-upload-form #otherData').hide();
+                preview.attr("src","");
+                preview.attr("style", "display:none");
+                message.html('<span class="glyphicon glyphicon-alert text-danger"></span> Nepodporovaný typ souboru!');
+                message.show();
+        }
+
+        this._updateSubmitBtnStatus();
     },
 
     _updateSubmitBtnStatus: function() {
-        // TODO
+        var imgMsg = $('#photoDB-upload-form #gpc-img-message');
+        var submitBtn = $('#photoDB-upload-form #submitBtn');
+
+        if (imgMsg.contents().length == 0 &&
+            !this._authorError &&
+            !this._coorsError
+           ) {
+            submitBtn.prop('disabled', false);
+        } else {
+            submitBtn.prop('disabled', true);
+        }
     },
 
     // Read exif data of image
@@ -306,11 +333,18 @@ L.Control.PhotoDBGui = L.Control.extend({
         var btnSourceManual = $('#photoDB-upload-form #sourceManual');
         var message = $('#photoDB-latlon-message');
 
+        var pLat =  $('#photoDB-upload-form #lat');
+        var pLon =  $('#photoDB-upload-form #lon');
+
         $('#photoDB-upload-form #sourceManual').button('toggle')
+
+        $('#photoDB-upload-form #latlonFs').show();
+        $('#photoDB-upload-form #otherData').show();
 
         this._hideMarker();
         this._updateLatLonLabel(0, 0);
 
+        this._map.on('click', this._mapClicked, this);
 
         btnSourceExif.addClass("disabled")
         btnSourceManual.button('toggle');
@@ -332,8 +366,14 @@ L.Control.PhotoDBGui = L.Control.extend({
 
         if (!exif) {
             // No exif in image
+            message.html("Pozici vyberete kliknutím do mapy.");
             message.show();
-            message.html("Pozici Vyberete kliknutím do mapy.");
+
+            pLat.val(0);
+            pLon.val(0);
+            pLat.attr('exif-value', '');
+            pLon.attr('exif-value', '');
+
             return;
         }
 
@@ -348,8 +388,6 @@ L.Control.PhotoDBGui = L.Control.extend({
             this._updateLatLonLabel(lat, lon);
             this._showMarker(lat, lon);
 
-            var pLat =  $('#photoDB-upload-form #lat');
-            var pLon =  $('#photoDB-upload-form #lon');
             pLat.val(lat);
             pLon.val(lon);
 
@@ -358,17 +396,35 @@ L.Control.PhotoDBGui = L.Control.extend({
 
             btnSourceExif.removeClass("disabled");
             btnSourceExif.button('toggle');
-            message.hide();
-            message.html("");
+            message.html("Pozici upravíte posunutím ukazatele nebo kliknutím do mapy.");
+            message.show();
         }
     },
 
+
+    _mapClicked: function(e){
+        if (! this.positionMarkerVisible) {
+            this._showMarker(e.latlng.lat, e.latlng.lng);
+            this._updateLatLonLabel(e.latlng.lat, e.latlng.lng);
+
+            var message = $('#photoDB-latlon-message');
+            message.html("Pozici upravíte posunutím značky nebo kliknutím do mapy.");
+        } else {
+            if ( $('#photoDB-upload-form #sourceExif').hasClass('active')) {
+                $('#photoDB-upload-form #sourceManual').click();
+            }
+            this._moveMarker(e.latlng.lat, e.latlng.lng, false);
+            this._updateLatLonLabel(e.latlng.lat, e.latlng.lng);
+        }
+    },
 
     _showMarker: function (lat, lon) {
 
         if (!lat || !lon) {
             return;
         }
+
+        this.positionMarkerVisible = true;
 
         this._map.setZoom(18, {animate: false});
         this._map.panTo([lat, lon], {animate: false});
@@ -378,55 +434,39 @@ L.Control.PhotoDBGui = L.Control.extend({
         this.positionMarker.addTo(this._map);
     },
 
-    _moveMarker: function (lat, lon) {
+    _moveMarker: function (lat, lon, panMap) {
 
         if (!lat || !lon) {
             return;
         }
 
-        this._map.panTo([lat, lon], {animate: false});
+        if (panMap) {
+            this._map.panTo([lat, lon], {animate: false});
+        }
         this.positionMarker.setLatLng([lat, lon]);
     },
 
     _hideMarker: function () {
+        this._map.off('click', this._mapClicked, this);
         this._map.removeLayer(this.positionMarker);
+        this.positionMarkerVisible = false;
     },
 
     _updateLatLonLabel: function(lat, lon) {
         var elatlon = $('#photoDB-upload-form #latlon');
 
         if (!lat || lat == 0 || !lon ||lon == 0 ) {
-            elatlon.val('--.---, --.---');
+            elatlon.val('');
+            elatlon.prop("title","Lat, Lon (Povinné pole!)");
+            elatlon.addClass("inputError");
+            this._latlonError = true;
         } else {
             elatlon.val((lat*1).toFixed(this._precision) + ', ' + (lon*1).toFixed(this._precision));
+            elatlon.prop("title","Lat, Lon");
+            elatlon.removeClass("inputError");
+            this._latlonError = false;
         }
-
-
     },
-
-//     _updateDistanceLabel: function() {
-//
-//         var latExif = $('#photoDB-upload-form #latExif');
-//         var lonExif = $('#photoDB-upload-form #lonExif');
-//         var latOsm = $('#photoDB-upload-form #latOsm');
-//         var lonOsm = $('#photoDB-upload-form #lonOsm');
-// //         var distanceLabel = $('#photoDB-upload-form #gpc-latlon-distance');
-//
-//
-//         if (latExif.val() != "--.---" && !osmcz.coorsError ) {
-//             var distance = Math.abs(OSM.distance( {'lat': latOsm.val(), 'lng': lonOsm.val()},
-//                                                   {'lat': latExif.val(), 'lng': lonExif.val()})).toFixed(2);
-//             if (distance > 50.01) {
-//               distanceLabel.html('<span class="glyphicon glyphicon-alert text-warning"></span> '+
-//                                  '<strong class="text-warning" title="Rozdíl exif a osm souřadnic je větší než 50 metrů">(Rozdíl: ' +
-//                                   distance.replace(/(\d)(?=(\d{3})+\.)/g, '$1 ') + ' metrů)</strong>');
-//             } else {
-//               distanceLabel.html("(Rozdíl: " + distance.replace(/(\d)(?=(\d{3})+\.)/g, '$1 ') + " metrů)");
-//             }
-//         } else {
-//             distanceLabel.html("");
-//         }
-//     },
 
     // Get licenses list from api
     _getLicenses: function() {
@@ -444,8 +484,7 @@ L.Control.PhotoDBGui = L.Control.extend({
                             lcSel.append($('<option>', {
                                     value: k,
                                     text : jsonObj.licenses[k],
-                                    title: jsonObj.licenses[k],
-                                    label: k
+                                    title: jsonObj.licenses[k]
                                 }));
                             });
 
@@ -458,9 +497,59 @@ L.Control.PhotoDBGui = L.Control.extend({
         }
     },
 
-    _submit: function() {
-        // get radio button value
-        $('#latlonSource').find('label.active').find('input').prop('value');
+    _resetForm: function(e) {
+        this._hideMarker();
+
+        // Hide image thumbnail
+        var preview = $('#photoDB-upload-form #photoDB-preview');
+        preview.hide();
+        preview.attr("src", "");
+
+        // Reset LatLonLabel
+        this._updateLatLonLabel(0,0);
+        var message = $('#photoDB-upload-form #photoDB-img-message');
+        message.html("");
+        message.hide();
+
+        // Author
+        $('#photoDB-upload-form #author').val(null);
+
+        // read author and license from cookies
+        if (Cookies.get("_photoDB_author") != null)
+          $("#photoDB-upload-form #author").val(Cookies.get("_photoDB_author"));
+
+        this._authorChanged();
+
+        if (Cookies.get("_photoDB_license") != null)
+          $("#photoDB-upload-form #license").val(Cookies.get("_photoDB_license")).change();
+
+        $('#photoDB-upload-form #latlonFs').hide();
+        $('#photoDB-upload-form #otherData').hide();
+
+        // Show guidepost options block
+        $('#photoDB-upload-form #guidepostOptions').show();
+
+        this._updateSubmitBtnStatus();
+
+    },
+
+    _submitForm: function() {
+        var license = $('#photoDB-upload-form #license option:selected').val();
+
+        var formData = new FormData($('#photoDB-upload-form')[0]);
+        formData.append('license', license);
+
+
+        //Check selected license and update cookie if needed
+        if (Cookies.get("_photoDB_license") == null ||
+             (Cookies.get("_photoDB_license") != null &&
+              license != Cookies.get("_photoDB_license")
+             )) {
+                Cookies.set("_photoDB_license", license, {expires: 90});
+        }
+
+//         // get radio button value
+//         $('#latlonSource').find('label.active').find('input').prop('value');
 
         toastr.success('Fotografie byla odeslána.', 'Děkujeme', {closeButton: true, positionClass: "toast-bottom-center"});
     }
