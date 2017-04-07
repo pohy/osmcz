@@ -760,6 +760,12 @@ div[group-active=true]:hover {
     margin-bottom: 10px;
 }
 
+a #photoDB-preview:hover {
+    -moz-box-shadow: 0 0 3px #337ab7;
+    -webkit-box-shadow: 0 0 3px #337ab7;
+    box-shadow: 0 0 3px #337ab7;
+}
+
 .photoDB-message {
     margin-top: 5px;
 }
@@ -787,8 +793,17 @@ div[group-active=true]:hover {
     border:2px solid #d9534f;
 }
 
-/* END of PhotoDB-gui.js */
+#modal-container button.close {
+    font-size: 300%;
+    margin-top: -25px;
+    margin-right: -10px;
+    color: #000;
+    opacity: 0.6;
+    font-weight: 700;
+    line-height: 1;
+}
 
+/* END of PhotoDB-gui.js */
 
 /* leaflet-condensed-attribution plugin*/
 .leaflet-container .leaflet-condensed-attribution {

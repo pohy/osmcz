@@ -61,6 +61,7 @@ L.Control.PhotoDBGui = L.Control.extend({
         var cnt = document.getElementById("sidebar-content");
 
         // from http://stackoverflow.com/a/39065147
+        // Image upload html template
         const formTemplate = ({ maxSize }) => `
         <h4>Nahrání fotografie</h4>
         <p class='mark text-center'>Vyberte fotografii, doplňte údaje a stiskněte tlačítko [Nahrát fotografii]
@@ -71,87 +72,92 @@ L.Control.PhotoDBGui = L.Control.extend({
             <input type="hidden" id="lat" name="lat" value="0" exif-value="" />
             <input type="hidden" id="lon" name="lon" value="0" exif-value="" />
 
-        <fieldset id="photo">
-            <h5>Fotografie</h5>
-          <img id="photoDB-preview" height="200" src="" alt="Náhled fotografie..." class="thumbnail hidden">
-          <input name="uploadedfile" type="file" id="photoDB-file" size="20" class="hidden"/>
-          <div id="imgSelBtnDiv">
-            <input type="button" id="imgSelBtn" value="Vyberte fotografii" class="btn btn-default btn-xs center-block" />
-          </div>
-          <div id="photoDB-img-message" class="alert alert-danger photoDB-message text-center"></div>
-        </fieldset>
-
-        <fieldset id="latlonFs">
-            <h5>Pozice <span class="smaller">(lat,lon)</span></h5>
-            <div class="input-group input-group-sm">
-                <div id="latlonSource" class="input-group-btn input-group-btn" data-toggle="buttons">
-                    <label id="sourceManual" class="btn btn-secondary btn-default active">
-                        <input type="radio" id="latlonSourceManual" name="latlonSource" value="manual" autocomplete="off"> Ručně
-                    </label>
-                    <label id="sourceExif" class="btn btn-secondary btn-default disabled">
-                        <input type="radio" id="latlonSourceExif" name="latlonSource" value="exif" autocomplete="off" checked> Exif
-                    </label>
+            <fieldset id="photo">
+                <h5>Fotografie</h5>
+                <a href="#" class="darken" data-toggle="modal" data-target="#myModal">
+                    <img id="photoDB-preview" height="200" src="" alt="Náhled fotografie..." class="thumbnail center-block">
+                </a>
+                <input name="uploadedfile" type="file" id="photoDB-file" size="20" class="hidden"/>
+                <div id="imgSelBtnDiv">
+                    <input type="button" id="imgSelBtn" value="Vyberte fotografii" class="btn btn-default btn-xs center-block" />
                 </div>
-                <input type="text" id="latlon" name="latlonDisp" value="" placeholder="--.---, --.---" title="Lat, Lon" class="form-control" readonly />
-            </div>
-            <div id="photoDB-latlon-message" class="photoDB-message mark text-center" style="display: none;"></span>
-        </fieldset>
+                <div id="photoDB-img-message" class="alert alert-danger photoDB-message text-center"></div>
+            </fieldset>
 
-        <fieldset id="otherData">
-            <h5>Doplňující údaje</h5>
-            <div class="form">
-                <label for="author" class="label-margin">Autor:</label>
-                <input type="text" id="author" name="author" placeholder="Vaše jméno/přezdívka" class="form-control input-sm">
-                <label for="author" class="label-margin">Licence:</label>
-                <select id="license" class="form-control"></select>
-                <label for="phototype" class="label-margin">Objekt na fotografii:</label>
-                <select id="phototype" class="form-control">
-                    <option value="rozcestnik">Rozcestník</option>
-                    <option value="infotabule">Informační tabule</option>
-                    <option value="mapa">Mapa</option>
-                    <option value="panorama">Panorama</option>
-                    <option value="jiny">Jiný</option>
-                </select>
-                <div id="guidepostOptions">
-                    <label for="guidepostContent" class="label-margin">Typ rozcestníku:</label>
-                    <div id="guidepostContent" class="btn-group btn-group-xs" data-toggle="buttons">
-                        <label class="btn btn-default">
-                            <input type="checkbox" value="hiking" autocomplete="off">Pěší
+            <fieldset id="latlonFs">
+                <h5>Pozice <span class="smaller">(lat,lon)</span></h5>
+                <div class="input-group input-group-sm">
+                    <div id="latlonSource" class="input-group-btn input-group-btn" data-toggle="buttons">
+                        <label id="sourceManual" class="btn btn-secondary btn-default active">
+                            <input type="radio" id="latlonSourceManual" name="latlonSource" value="manual" autocomplete="off"> Ručně
                         </label>
-                        <label class="btn  btn-default">
-                            <input type="checkbox" value="cycle" autocomplete="off">Cyklo
-                        </label>
-                        <label class="btn  btn-default">
-                            <input type="checkbox" value="skir" autocomplete="off">Lyžařský
-                        </label>
-                        <label class="btn  btn-default">
-                            <input type="checkbox" value="horse" autocomplete="off">Koňský
-                        </label>
-                        <label class="btn  btn-default">
-                            <input type="checkbox" value="wheelchair" autocomplete="off">Vozíčkářský
+                        <label id="sourceExif" class="btn btn-secondary btn-default disabled">
+                            <input type="radio" id="latlonSourceExif" name="latlonSource" value="exif" autocomplete="off" checked> Exif
                         </label>
                     </div>
-                    <br>
-                    <label for="ref" class="label-margin">Ref:</label>
-                    <input type="text" id="ref" name="ref" value="" placeholder="Například: XX114 nebo 0123/45" class="form-control input-sm"/>
+                    <input type="text" id="latlon" name="latlonDisp" value="" placeholder="--.---, --.---" title="Lat, Lon" class="form-control" readonly />
                 </div>
-                <label for="note" class="label-margin">Poznámka: </label>
-                <input type="text" id="note" name="note" value="" placeholder="Zde můžete vložit poznámku k fotografii" class="form-control input-sm"/>
-                <div id="photoDB-otherData-message" class="photoDB-message mark text-center" style="display: none;"></span>
-            </div>
-        </fieldset>
-        <fieldset>
-            <div class="photoDB-btn-grp">
-                <input type="reset" id="resetBtn" name="reset" value="Reset" onclick="return false;" class="btn btn-default btn-xs"/>
-                <input type="submit" id="submitBtn" name="submitBtn" value="Nahrát fotografii" onclick="return false;" class="btn btn-default btn-xs pull-right" disabled />
-            </div>
-        </fieldset>
+                <div id="photoDB-latlon-message" class="photoDB-message mark text-center" style="display: none;"></span>
+            </fieldset>
+
+            <fieldset id="otherData">
+                <h5>Doplňující údaje</h5>
+                <div class="form">
+                    <label for="author" class="label-margin">Autor:</label>
+                    <input type="text" id="author" name="author" placeholder="Vaše jméno/přezdívka" class="form-control input-sm">
+                    <label for="author" class="label-margin">Licence:</label>
+                    <select id="license" class="form-control"></select>
+                    <label for="phototype" class="label-margin">Objekt na fotografii:</label>
+                    <select id="phototype" class="form-control">
+                        <option value="rozcestnik">Rozcestník</option>
+                        <option value="infotabule">Informační tabule</option>
+                        <option value="mapa">Mapa</option>
+                        <option value="panorama">Panorama</option>
+                        <option value="jiny">Jiný</option>
+                    </select>
+                    <div id="guidepostOptions">
+                        <label for="guidepostContent" class="label-margin">Typ rozcestníku:</label>
+                        <div id="guidepostContent" class="btn-group btn-group-xs" data-toggle="buttons">
+                            <label class="btn btn-default">
+                                <input type="checkbox" value="hiking" autocomplete="off">Pěší
+                            </label>
+                            <label class="btn  btn-default">
+                                <input type="checkbox" value="cycle" autocomplete="off">Cyklo
+                            </label>
+                            <label class="btn  btn-default">
+                                <input type="checkbox" value="skir" autocomplete="off">Lyžařský
+                            </label>
+                            <label class="btn  btn-default">
+                                <input type="checkbox" value="horse" autocomplete="off">Koňský
+                            </label>
+                            <label class="btn  btn-default">
+                                <input type="checkbox" value="wheelchair" autocomplete="off">Vozíčkářský
+                            </label>
+                        </div>
+                        <br>
+                        <label for="ref" class="label-margin">Ref:</label>
+                        <input type="text" id="ref" name="ref" value="" placeholder="Například: XX114 nebo 0123/45" class="form-control input-sm"/>
+                    </div>
+                    <label for="note" class="label-margin">Poznámka: </label>
+                    <input type="text" id="note" name="note" value="" placeholder="Zde můžete vložit poznámku k fotografii" class="form-control input-sm"/>
+                    <div id="photoDB-otherData-message" class="photoDB-message mark text-center" style="display: none;"></span>
+                </div>
+            </fieldset>
+            <fieldset>
+                <div class="photoDB-btn-grp">
+                    <input type="reset" id="resetBtn" name="reset" value="Reset" onclick="return false;" class="btn btn-default btn-xs"/>
+                    <input type="submit" id="submitBtn" name="submitBtn" value="Nahrát fotografii" onclick="return false;" class="btn btn-default btn-xs pull-right" disabled />
+                </div>
+            </fieldset>
+        </form>
         `;
 
+        // Add template to sidebar
         $('#sidebar-content').html([
             { maxSize: '10000000' }
         ].map(formTemplate));
 
+        // Get elements containers
         var previewContainer = document.getElementById("photoDB-preview");
         var uploadedFile = document.getElementById("photoDB-file");
         var imgSelBtn = document.getElementById("imgSelBtn");
@@ -161,8 +167,7 @@ L.Control.PhotoDBGui = L.Control.extend({
         var resetBtn = document.getElementById("resetBtn");
         var submitBtn =document.getElementById("submitBtn");
 
-//         onclick="osmcz.gpcheck.uploadFormData(' + osmid + ');return false;"
-
+        // Bind events to elements
         L.DomEvent.on(imgSelBtn, 'click', this._selectImageClicked, this);
         L.DomEvent.on(uploadedFile, 'change', this._previewFile, this);
         L.DomEvent.on(previewContainer, 'load', this._readExif, this);
@@ -170,13 +175,39 @@ L.Control.PhotoDBGui = L.Control.extend({
         L.DomEvent.on(author, 'change', this._authorChanged, this);
         L.DomEvent.on(phototype, 'change', this._phototypeChanged, this);
         L.DomEvent.on(resetBtn, 'click', this._resetForm, this);
-        L.DomEvent.on(submitBtn, 'click', this._submitForm  , this);
+        L.DomEvent.on(submitBtn, 'click', this._submitForm, this);
+
+        var modal = document.getElementById("modal-container");
+
+        const modalTemplate = ({}) => `
+        <!-- Image modal dialog -->
+        <div class="modal fade" id="myModal" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <img src="" alt="Načítám náhled" id="modalImg" class="thumbnail block-center" style="width: 100%;" >
+                    </div>
+                </div>
+            </div>
+        </div>
+        `
+        // Add template to modal element
+        $('#modal-container').html([{}].map(modalTemplate));
+
+        $('#myModal').on('shown.bs.modal', function () {
+            $('#modalImg').attr('src', $('#photoDB-preview').attr('src'));
+        });
+
+
+
 
         this._getLicenses();
 
         // Create position marker
         this.positionMarker = L.marker([0, 0], {clickable: false, draggable: true, title: 'Vybrané souřadnice'});
 
+        // Bind events to marker
         this.positionMarker
         .on('dragstart', function(event){
             $('#photoDB-upload-form #sourceManual').click();
@@ -210,7 +241,7 @@ L.Control.PhotoDBGui = L.Control.extend({
         var hc = "";
 
         hc += "<div class='sidebar-inner'>";
-        hc += "<!--sidebar from guideposts--> ";
+        hc += "<!--sidebar from PhotoDB--> ";
         hc += "  <div id='sidebar-content'>";
         hc += "  </div>";
         hc += "</div>";
@@ -285,7 +316,6 @@ L.Control.PhotoDBGui = L.Control.extend({
             if (file) {
                 reader.readAsDataURL(file); //reads the data as a URL
                 preview.attr("style", "display:block");
-                preview.attr("class", "center-block");
 
                 // Check file size
                 if (file.size > $("#photoDB-upload-form input[name='MAX_FILE_SIZE']").val()) {
@@ -313,10 +343,11 @@ L.Control.PhotoDBGui = L.Control.extend({
     },
 
     _updateSubmitBtnStatus: function() {
-        var imgMsg = $('#photoDB-upload-form #gpc-img-message');
+        var file =  $('#photoDB-upload-form #photoDB-file').prop("files")[0];
+        var imgMsg = $('#photoDB-upload-form #photoDB-img-message');
         var submitBtn = $('#photoDB-upload-form #submitBtn');
 
-        if (imgMsg.contents().length == 0 &&
+        if (file && imgMsg.contents().length == 0 &&
             !this._authorError &&
             !this._coorsError
            ) {
@@ -499,6 +530,10 @@ L.Control.PhotoDBGui = L.Control.extend({
 
     _resetForm: function(e) {
         this._hideMarker();
+
+        // Image
+        var file = $('#photoDB-upload-form #photoDB-file');
+        file.val(null);
 
         // Hide image thumbnail
         var preview = $('#photoDB-upload-form #photoDB-preview');
